@@ -3,7 +3,7 @@
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 //error_reporting( E_ALL ^ E_NOTICE );
-error_reporting( E_ALL );
+error_reporting(E_ALL);
 
 $dbName = "praktykanci";
 $host = "localhost";
@@ -20,26 +20,27 @@ function randomString($length = 15)
 {
     global $randomGeneratorTimeLetter;
     $startTime = microtime(true);
-    
+
     // test 0 - one milion = 1.3495995998383
     $characters = 'abcdefghijklmnopqrstuvwxyz';
     $shuffle = str_shuffle($characters);
     $randomText = substr($shuffle, 0, $length);
     $result = ucfirst($randomText);
-    
+
     $endTime = microtime(true);
     $randomGeneratorTimeLetter += ($endTime - $startTime);
-    
+
     return $result;
 }
 
-function genRandomString($length = 15) {
-    
+function genRandomString($length = 15)
+{
+
     global $randomGeneratorTimeLetterGen;
     $startTime = microtime(true);
-    
+
     // test 1 - one milion = 1.2621750831604
-    $string = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'),0,$length);
+    $string = substr(str_shuffle('abcdefghijklmnopqrstuvwxyz'), 0, $length);
     // test 2 - one milion = 3.2537093162537
 //    $chars = "abcdefghijklmnopqrstuvwxyz";
 //    $l = strlen($chars)-1;
@@ -49,8 +50,8 @@ function genRandomString($length = 15) {
 //        $string .= $chars[mt_rand(0, $l)];
 //    }
     // test 3 - one milion = 
-    
-    
+
+
     $endTime = microtime(true);
     $randomGeneratorTimeLetterGen += ($endTime - $startTime);
 
@@ -61,16 +62,71 @@ function randomAge()
 {
     global $randomGeneratorTimeNumber;
     $startTime = microtime(true);
-    
+
     // test 0 - one milion = 0.17256164550781
 //    $result = rand(1, 99);
     // test 1 - one milion = 0.17052984237671
     $result = mt_rand(1, 99);
-    
+
     $endTime = microtime(true);
     $randomGeneratorTimeNumber += ($endTime - $startTime);
-    
+
     return $result;
+}
+
+function insertDataFirst($dbh, $countRecords)
+{
+    $sth = $dbh->prepare('INSERT INTO users(first_name, last_name, user_age)'
+            . 'VALUES (:firstname, :lastname, :age)');
+    $sth->bindParam(':firstname', $firstname);
+    $sth->bindParam(':lastname', $lastname);
+    $sth->bindParam(':age', $age);
+
+    for ($i = 0; $i < $countRecords; $i++)
+    {
+        $firstname = randomString();
+        $lastname = randomString();
+        $age = randomAge();
+        $sth->execute();
+    }
+}
+
+function insertDataSecond($dbh, $countRecords)
+{
+    
+    $data = array();
+    
+    for ($i = 0; $i < $countRecords; $i++)
+    {
+        $data[] = array(
+            "firstname" => randomString(15),
+            "lastname" => randomString(15),
+            "age" => randomAge(),
+        );   
+    }
+    echo "Liczba rekordów w tablicy [ data ]: " . count($data) ."\n";
+    
+//    print_r($data);
+    
+    
+    $dbh->beginTransaction();
+
+    $sql = 'INSERT INTO users
+        (first_name, last_name, user_age)
+        VALUES (?, ?, ?)';
+
+    $sth = $dbh->prepare($sql);
+
+    foreach ($data as $row)
+    {
+        $sth->execute(array(
+            $row['firstname'],
+            $row['lastname'],
+            $row['age'],
+        ));
+    }
+
+    $dbh->commit();
 }
 
 $dbh = new PDO("pgsql:dbname=$dbName;host=$host", $dbUser, $dbPass);
@@ -86,48 +142,16 @@ echo "Start: " . date('H:i:s', time()) . "\n";
 
 $countRecords = 1000;
 
-//$usersRecordsTable = array();
-//for ($i = 0; $i < $countRecords; $i++)
-//{
-//    $usersRecordsTable[$i] = array(
-//        "first_name" => randomString(15),
-//        "last_name" => randomString(15),
-//        "age" => randomAge(),
-//    );   
-//}
-//echo "Liczba rekordów w tablicy [ usersRecordsTable ]: " . count($usersRecordsTable) ."\n";
-
-$sth = $dbh->prepare('INSERT INTO users(first_name, last_name, user_age)'
-        . 'VALUES (:firstname, :lastname, :age)');
-$sth->bindParam(':firstname', $firstname);
-$sth->bindParam(':lastname', $lastname);
-$sth->bindParam(':age', $age);
-
-
 echo "do zapisania w tabeli: " . number_format($countRecords, 0, ',', ' ') . " rekordów\n";
 
 $startTime = microtime(true);
 
-
-
-for ($i = 0; $i < $countRecords; $i++)
-{
-
-    
-
-    $firstname = randomString();
-    $lastname = randomString();
-    $age = randomAge();
-    
-//    $firstname2 = genRandomString();
-//    $lastname2 = genRandomString();
-    
-    $sth->execute();     
-}
+//insertDataFirst($dbh, $countRecords);
+//insertDataSecond($dbh, $countRecords);
 
 $endTime = microtime(true);
 $randomGeneratorTimeSql += ($endTime - $startTime);
-$randomGeneratorTimeSql = ($randomGeneratorTimeSql - $randomGeneratorTimeLetter - $randomGeneratorTimeNumber); 
+$randomGeneratorTimeSql = ($randomGeneratorTimeSql - $randomGeneratorTimeLetter - $randomGeneratorTimeNumber);
 
 
 
@@ -146,8 +170,8 @@ $allNumber = 5000000 / $countRecords;
 echo "czas dla 5 milionów\n\n";
 echo number_format($allTimeScript * $allNumber, 16, '.', ' ') . " sek - Czas całego skryptu\n";
 echo number_format($randomGeneratorTimeSql * $allNumber, 16, '.', ' ') . " sek - Czas SQL-a\n";
-echo "    " . number_format($randomGeneratorTimeLetter * $allNumber, 16, '.', ' ') . " sek - randomString()\n";
-echo "     " . number_format($randomGeneratorTimeNumber * $allNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
+echo number_format($randomGeneratorTimeLetter * $allNumber, 16, '.', ' ') . " sek - randomString()\n";
+echo number_format($randomGeneratorTimeNumber * $allNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
 
 
 

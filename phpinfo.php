@@ -14,44 +14,29 @@ $host = "localhost";
 $dbUser = "user-praktykanci";
 $dbPass = "praktykanci";
 
-$servername = "localhost";
-$username = "user-praktykanci";
-$password = "praktykanci";
-$dbname = "praktykanci";
-
-//    $START = microtime(true);
-//    for ($i = 1; $i < 5000000; ++$i) {
-//        $j = rand(1,100);
-//    }
-//    $END = microtime(true) - $START;
-//    print "Short rand() took $END seconds\n";
-//
-//    $START = microtime(true);
-//    for ($i = 1; $i < 5000000; ++$i) {
-//        $j = mt_rand(1,100);
-//    }
-//    $END = microtime(true) - $START;
-//    print "Short mt_rand() took $END seconds\n";
-//
-//    $START = microtime(true);
-//    for ($i = 1; $i < 5000000; ++$i) {
-//        $j = rand(1,10000000);
-//    }
-//    $END = microtime(true) - $START;
-//    print "Long rand() took $END seconds\n";
-//
-//    $START = microtime(true);
-//    for ($i = 1; $i < 5000000; ++$i) {
-//        $j = mt_rand(1,10000000);
-//    }
-//    $END = microtime(true) - $START;
-//    print "Long mt_rand() took $END seconds\n";
 
 
-mt_srand(123456);
-    for($i = 0; $i < 100; $i++) {
-     echo mt_rand(1, 99), "\n";   
-    }
+
+
+$dbh->beginTransaction();
+
+$sql = 'INSERT INTO fruit
+    (name, colour, calories)
+    VALUES (?, ?, ?)';
+
+$sth = $dbh->prepare($sql);
+
+foreach ($fruits as $fruit) {
+    $sth->execute(array(
+        $fruit->name,
+        $fruit->colour,
+        $fruit->calories,
+    ));
+}
+
+$dbh->commit();
+
+
 
 
 
