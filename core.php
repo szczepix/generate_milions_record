@@ -93,22 +93,18 @@ function insertDataFirst($dbh, $countRecords)
 
 function insertDataSecond($dbh, $countRecords)
 {
-    
     $data = array();
-    
+
     for ($i = 0; $i < $countRecords; $i++)
     {
         $data[] = array(
             "firstname" => randomString(15),
-            "lastname" => randomString(15),
-            "age" => randomAge(),
-        );   
+            "lastname"  => randomString(15),
+            "age"       => randomAge(),
+        );
     }
-    echo "Liczba rekordów w tablicy [ data ]: " . count($data) ."\n";
-    
-//    print_r($data);
-    
-    
+    echo "Liczba rekordów w tablicy [ data ]: " . count($data) . "\n";
+
     $dbh->beginTransaction();
 
     $sql = 'INSERT INTO users
@@ -129,6 +125,32 @@ function insertDataSecond($dbh, $countRecords)
     $dbh->commit();
 }
 
+function insertDataThird($dbh, $countRecords)
+{
+    $data = array();
+
+    for ($i = 0; $i < $countRecords; $i++)
+    {
+        $data[] = array(randomString(15), randomString(15), randomAge());
+    }
+    echo "Liczba rekordów w tablicy [ data ]: " . count($data) . "\n";
+
+    $sql = "INSERT INTO users (first_name, last_name, user_age) VALUES (?,?,?)";
+
+    $stmt = $dbh->prepare($sql);
+
+    foreach ($data as $row)
+    {
+        $stmt->execute($row);
+    }
+}
+
+function insertDataFourth($dbh, $countRecords)
+{
+
+    
+}
+
 $dbh = new PDO("pgsql:dbname=$dbName;host=$host", $dbUser, $dbPass);
 $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $sqlTableTruncate = "TRUNCATE TABLE public.users;";
@@ -147,7 +169,9 @@ echo "do zapisania w tabeli: " . number_format($countRecords, 0, ',', ' ') . " r
 $startTime = microtime(true);
 
 //insertDataFirst($dbh, $countRecords);
-//insertDataSecond($dbh, $countRecords);
+insertDataSecond($dbh, $countRecords); // is most fast than other
+//insertDataThird($dbh, $countRecords);
+//insertDataFourth($dbh, $countRecords);
 
 $endTime = microtime(true);
 $randomGeneratorTimeSql += ($endTime - $startTime);
