@@ -4,6 +4,11 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 //error_reporting( E_ALL ^ E_NOTICE );
 error_reporting(E_ALL);
+echo ini_get("memory_limit") . "\n";
+ini_set('memory_limit', '64M');
+echo ini_get("memory_limit") . "\n";
+echo "not real: " . (memory_get_peak_usage(false) / 1024 / 1024) . " MiB\n";
+echo "real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
 
 $dbName = "praktykanci";
 $host = "localhost";
@@ -148,7 +153,81 @@ function insertDataThird($dbh, $countRecords)
 function insertDataFourth($dbh, $countRecords)
 {
 
-    
+    $dbh->beginTransaction();
+
+    $sqlRandomString = "create or replace function random_string(length integer) returns text as 
+$$
+declare
+  chars text[] := '{a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z}';
+  result text := '';
+  i integer := 0;
+begin
+  if length < 0 then
+    raise exception 'Given length cannot be less than 0';
+  end if;
+  for i in 1..length loop
+    result := result || chars[1+random()*(array_length(chars, 1)-1)];
+  end loop;
+  return result;
+end;
+$$ language plpgsql";
+
+    $sqlInsertBigData = "CREATE OR REPLACE FUNCTION insert_big_data(length integer) returns integer AS '
+DECLARE
+    a1 character varying;
+    a2 character varying;
+    a3 integer;
+BEGIN
+    a1:=random_string(15);
+    a2:=random_string(15);
+    a3:=random_number(2);
+FOR i IN 1..$1
+LOOP
+    INSERT INTO users (first_name, last_name, user_age) VALUES (a1,a2,a3);
+END LOOP;
+return 1;
+END;
+' LANGUAGE 'plpgsql'";
+
+    $sqlInsert = "SELECT insert_big_data(10)";
+
+    $sth = $dbh->prepare($sqlRandomString);
+    $sth = $dbh->prepare($sqlInsertBigData);
+    $sth = $dbh->prepare($sqlInsert);
+
+    $sth->execute();
+
+    $dbh->commit();
+}
+
+function insertDataFive($dbh, $countRecords)
+{
+
+    for ($i = 0; $i < ($countRecords/100000); $i++) // $i < 50
+    {
+        echo "Loop one \$i: " . $i . "\n";
+        try
+        {
+            echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n";
+
+            $sql = "INSERT INTO users
+        (first_name, last_name, user_age)
+        VALUES ('" . randomString(15) . "','" . randomString(15) . "'," . randomAge() . ")";
+
+            for ($j = 1; $j < 100000; $j++)
+            {
+                $sql .= ",('" . randomString(15) . "','" . randomString(15) . "'," . randomAge() . ")";
+            }
+            $dbh->exec($sql);
+            
+            
+            echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+            unset($sql);
+        } catch (PDOException $e)
+        {
+            echo 'PDO error: ' . $e->getMessage();
+        }
+    }
 }
 
 $dbh = new PDO("pgsql:dbname=$dbName;host=$host", $dbUser, $dbPass);
@@ -160,18 +239,22 @@ $dbh->query($sqlTableTruncate);
 
 echo "<pre>";
 $startTimeScript = microtime(true);
-echo "Start: " . date('H:i:s', time()) . "\n";
+$startTimeGlobal = microtime(true);
+echo "Start: " . date('H:i:s', time()) . " \n";
 
-$countRecords = 1000;
+$countRecords = 5000000;
 
 echo "do zapisania w tabeli: " . number_format($countRecords, 0, ',', ' ') . " rekordów\n";
 
 $startTime = microtime(true);
 
 //insertDataFirst($dbh, $countRecords);
-insertDataSecond($dbh, $countRecords); // is most fast than other
+//insertDataSecond($dbh, $countRecords); // is most fast than other
 //insertDataThird($dbh, $countRecords);
 //insertDataFourth($dbh, $countRecords);
+insertDataFive($dbh, $countRecords);
+
+//phpinfo();
 
 $endTime = microtime(true);
 $randomGeneratorTimeSql += ($endTime - $startTime);
@@ -183,7 +266,8 @@ $randomGeneratorTimeSql = ($randomGeneratorTimeSql - $randomGeneratorTimeLetter 
 $endTimeScript = microtime(true);
 
 $allTimeScript = ($endTimeScript - $startTimeScript);
-echo "Koniec: " . date('H:i:s', time()) . "\n\n";
+$endTimeGlobal = microtime(true);
+echo "Koniec: " . date('H:i:s', time()) . "\n" . ($endTimeGlobal - $startTimeGlobal) . " s\n";
 echo number_format($allTimeScript, 16, '.', ' ') . " sek - Czas całego skryptu\n";
 echo number_format($randomGeneratorTimeSql, 16, '.', ' ') . " sek - Czas SQL-a\n";
 echo number_format($randomGeneratorTimeLetter, 16, '.', ' ') . " sek - randomString()\n";
@@ -196,12 +280,7 @@ echo number_format($allTimeScript * $allNumber, 16, '.', ' ') . " sek - Czas ca�
 echo number_format($randomGeneratorTimeSql * $allNumber, 16, '.', ' ') . " sek - Czas SQL-a\n";
 echo number_format($randomGeneratorTimeLetter * $allNumber, 16, '.', ' ') . " sek - randomString()\n";
 echo number_format($randomGeneratorTimeNumber * $allNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
-
-
-
-
-//echo "    " . number_format($randomGeneratorTimeLetterGen * $allNumber, 16, '.', ' ') . " - genRandomString()\n\n";;
-
+echo "    " . number_format($randomGeneratorTimeLetterGen * $allNumber, 16, '.', ' ') . " - genRandomString()\n\n";;
 $allPercentNumber = $allTimeScript * $allNumber;
 $sqlPercent = (($randomGeneratorTimeSql * $allNumber) * 100) / $allPercentNumber;
 $randomPercent = ((($randomGeneratorTimeLetter * $allNumber) + ($randomGeneratorTimeNumber * $allNumber)) * 100) / $allPercentNumber;
