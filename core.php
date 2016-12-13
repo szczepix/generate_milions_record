@@ -12,8 +12,10 @@ echo "real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
 
 $dbName = "praktykanci";
 $host = "localhost";
-$dbUser = "user-praktykanci";
-$dbPass = "praktykanci";
+//$dbUser = "user-praktykanci";
+//$dbPass = "praktykanci";
+$dbUser = "postgres";
+$dbPass = "postgres";
 
 $randomGeneratorTimeLetter = 0;
 $randomGeneratorTimeLetterGen = 0;
@@ -202,8 +204,8 @@ END;
 
 function insertDataFive($dbh, $countRecords)
 {
-
-    for ($i = 0; $i < ($countRecords/100000); $i++) // $i < 50
+    // In Source Code -> function insertDataFive
+    for ($i = 0; $i < ($countRecords / 100000); $i++) // $i < 50
     {
         echo "Loop one \$i: " . $i . "\n";
         try
@@ -219,11 +221,13 @@ function insertDataFive($dbh, $countRecords)
                 $sql .= ",('" . randomString(15) . "','" . randomString(15) . "'," . randomAge() . ")";
             }
             $dbh->exec($sql);
-            
-            
+
+
             echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
-            unset($sql);
-        } catch (PDOException $e)
+//            unset($sql);
+//            echo $sql . "\n";
+        }
+        catch (PDOException $e)
         {
             echo 'PDO error: ' . $e->getMessage();
         }
@@ -232,17 +236,33 @@ function insertDataFive($dbh, $countRecords)
 
 $dbh = new PDO("pgsql:dbname=$dbName;host=$host", $dbUser, $dbPass);
 $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$sqlTableTruncate = "TRUNCATE TABLE public.users;";
+//$sqlTableTruncate = "TRUNCATE TABLE public.users";
+$sqlTableTruncate = "DROP TABLE public.users";
 $dbh->query($sqlTableTruncate);
 
+$sqlTableCreate = "CREATE TABLE public.users
+(
+   user_id serial, 
+   first_name character varying(15), 
+   last_name character varying(15), 
+   user_age smallint,
+   CONSTRAINT user_id_key PRIMARY KEY (user_id)
+) 
+WITH (
+  OIDS = FALSE
+)";
+$sqlTableOwner = 'ALTER TABLE public.users
+  OWNER TO "user-praktykanci"';
 
+$dbh->query($sqlTableCreate);
+$dbh->query($sqlTableOwner);
 
 echo "<pre>";
 $startTimeScript = microtime(true);
 $startTimeGlobal = microtime(true);
 echo "Start: " . date('H:i:s', time()) . " \n";
 
-$countRecords = 5000000;
+$countRecords = 1000000;
 
 echo "do zapisania w tabeli: " . number_format($countRecords, 0, ',', ' ') . " rekordów\n";
 
@@ -252,9 +272,63 @@ $startTime = microtime(true);
 //insertDataSecond($dbh, $countRecords); // is most fast than other
 //insertDataThird($dbh, $countRecords);
 //insertDataFourth($dbh, $countRecords);
-insertDataFive($dbh, $countRecords);
+//insertDataFive($dbh, $countRecords);
 
-//phpinfo();
+$fileCSV = "file.csv";
+
+chmod("/projects/praktykanci/file.csv", 0666);
+
+try
+{
+    $fileHandler = fopen($fileCSV, 'w');
+
+    $dataTable = array('user_id', 'first_name', 'last_name', 'user_age',);
+
+    if ($fileHandler != false)
+    {
+
+        echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+        fputcsv($fileHandler, $dataTable);
+
+        for ($i = 0; $i < 5000000; $i ++)
+        {
+            fputcsv($fileHandler, array($i + 1, randomString(15), randomString(15), randomAge()));
+        }
+
+        fclose($fileHandler);
+
+//    unset($fileHandler);
+
+        echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+    }
+    else
+    {
+        echo "File open error";
+    }
+}
+catch (Exception $ex)
+{
+    echo "File Error: " . $ex->getMessage();
+}
+
+
+$sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
+FROM '/projects/praktykanci/" . $fileCSV . "'
+CSV 
+HEADER";
+
+echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+
+try
+{
+    $dbh->query($sqlBulk);
+}
+catch (PDOException $e)
+{
+    echo 'PDO error: ' . $e->getMessage();
+}
+
+echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
 
 $endTime = microtime(true);
 $randomGeneratorTimeSql += ($endTime - $startTime);
@@ -274,16 +348,17 @@ echo number_format($randomGeneratorTimeLetter, 16, '.', ' ') . " sek - randomStr
 echo number_format($randomGeneratorTimeNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
 
 
-$allNumber = 5000000 / $countRecords;
-echo "czas dla 5 milionów\n\n";
-echo number_format($allTimeScript * $allNumber, 16, '.', ' ') . " sek - Czas całego skryptu\n";
-echo number_format($randomGeneratorTimeSql * $allNumber, 16, '.', ' ') . " sek - Czas SQL-a\n";
-echo number_format($randomGeneratorTimeLetter * $allNumber, 16, '.', ' ') . " sek - randomString()\n";
-echo number_format($randomGeneratorTimeNumber * $allNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
-echo "    " . number_format($randomGeneratorTimeLetterGen * $allNumber, 16, '.', ' ') . " - genRandomString()\n\n";;
-$allPercentNumber = $allTimeScript * $allNumber;
-$sqlPercent = (($randomGeneratorTimeSql * $allNumber) * 100) / $allPercentNumber;
-$randomPercent = ((($randomGeneratorTimeLetter * $allNumber) + ($randomGeneratorTimeNumber * $allNumber)) * 100) / $allPercentNumber;
+//$allNumber = 5000000 / $countRecords;
+//echo "czas dla 5 milionów\n\n";
+//echo number_format($allTimeScript * $allNumber, 16, '.', ' ') . " sek - Czas całego skryptu\n";
+//echo number_format($randomGeneratorTimeSql * $allNumber, 16, '.', ' ') . " sek - Czas SQL-a\n";
+//echo number_format($randomGeneratorTimeLetter * $allNumber, 16, '.', ' ') . " sek - randomString()\n";
+//echo number_format($randomGeneratorTimeNumber * $allNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
+//echo "    " . number_format($randomGeneratorTimeLetterGen * $allNumber, 16, '.', ' ') . " - genRandomString()\n\n";
+//;
+$allPercentNumber = $allTimeScript;
+$sqlPercent = (($randomGeneratorTimeSql) * 100) / $allPercentNumber;
+$randomPercent = ((($randomGeneratorTimeLetter) + ($randomGeneratorTimeNumber)) * 100) / $allPercentNumber;
 echo "Proporcje czasów działania skryptu\n\n";
 echo number_format($sqlPercent, 4, '.', ' ') . "% - czas SQL-a\n";
 echo " " . number_format($randomPercent, 4, '.', ' ') . "% - czas generowania danych\n";
