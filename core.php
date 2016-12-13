@@ -1,5 +1,7 @@
 <?php
 
+echo "<pre>";
+
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 //error_reporting( E_ALL ^ E_NOTICE );
@@ -257,7 +259,6 @@ $sqlTableOwner = 'ALTER TABLE public.users
 $dbh->query($sqlTableCreate);
 $dbh->query($sqlTableOwner);
 
-echo "<pre>";
 $startTimeScript = microtime(true);
 $startTimeGlobal = microtime(true);
 echo "Start: " . date('H:i:s', time()) . " \n";
@@ -274,13 +275,17 @@ $startTime = microtime(true);
 //insertDataFourth($dbh, $countRecords);
 //insertDataFive($dbh, $countRecords);
 
-$fileCSV = "users.csv";
+$fileCSV = "plik.csv";
+
+$output = shell_exec('mkdir /tmp/ram');
+echo $output."\n";
+        
+$output = shell_exec('mount -t tmpfs -o size=512m tmpfs /tmp/ram');
+echo $output."\n";
 
 try
 {
-    $fileHandler = fopen($fileCSV, 'wb+');
-    
-//    chmod("/projects/praktykanci/".$fileCSV, 0666);
+    $fileHandler = fopen('/tmp/ram/'.$fileCSV, 'w');
 
     $dataTable = array('user_id', 'first_name', 'last_name', 'user_age',);
 
@@ -309,105 +314,89 @@ catch (Exception $ex)
     echo "File Error: " . $ex->getMessage();
 }
 
-//$fileCSV = "php://memory";
+//    $fileCSV = "php://memory";
 //
-//try
-//{
-//    $fileHandler = fopen($fileCSV, 'wb+');
-//    
-////    chmod("/projects/praktykanci/".$fileCSV, 0666);
-//
-////    $dataTable = array('user_id', 'first_name', 'last_name', 'user_age',);
-//
-//    if ($fileHandler != false)
+//    try
 //    {
+//        $fileHandler = fopen($fileCSV, 'wb+');
 //
-//        echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
-////        fputcsv($fileHandler, $dataTable);
+//    //    chmod("/projects/praktykanci/".$fileCSV, 0666);
 //
-//        for ($i = 0; $i < 5000000; $i ++)
+//    //    $dataTable = array('user_id', 'first_name', 'last_name', 'user_age',);
+//
+//        if ($fileHandler != false)
 //        {
-//            fputcsv($fileHandler, array($i + 1, randomString(15), randomString(15), randomAge()));
+//
+//            echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+//    //        fputcsv($fileHandler, $dataTable);
+//
+//            for ($i = 0; $i < 5000000; $i ++)
+//            {
+//                fputcsv($fileHandler, array($i + 1, randomString(15), randomString(15), randomAge()));
+//            }
+//
+//    //        rewind($fileHandler);
+//    //        fclose($fileHandler);
+//
+//            echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
 //        }
-//        
-////        rewind($fileHandler);
-////        fclose($fileHandler);
-//
-//        echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+//        else
+//        {
+//            echo "File open error";
+//        }
 //    }
-//    else
+//    catch (Exception $ex)
 //    {
-//        echo "File open error";
+//        echo "File Error: " . $ex->getMessage();
 //    }
-//}
-//catch (Exception $ex)
-//{
-//    echo "File Error: " . $ex->getMessage();
-//}
-
-//rewind($fileHandler);
-
-//var_dump($fileHandler);
-
-//echo stream_get_contents($fileHandler);
-
-//// Set the limit to 5 MB.
-//$fiveMBs = 5 * 1024 * 1024;
-//$fp = fopen("php://temp/maxmemory:$fiveMBs", 'r+');
-//
-//fputs($fp, "hello\n");
-//
-//// Read what we have written.
-//rewind($fp);
-//var_dump($fp);
-//echo stream_get_contents($fp);
 
 
-//$sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
-//FROM '/projects/praktykanci/" . $fileCSV . "'
-//CSV 
-//HEADER";
+    //$sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
+    //FROM '/projects/praktykanci/" . $fileCSV . "'
+    //CSV 
+    //HEADER";
 
+//    $fd = fopen('php://temp/maxmemory:1048576', 'w');
+//    $fd = fopen('/tmp/ram/plik.csv', 'w');
+//    if($fd === FALSE) {
+//        die('Failed to open temporary file');
+//    }
+//    
+//    $headers = array('user_id', 'first_name', 'last_name', 'user_age');
+//    $records = array(
+//        array(1, 'Janek', 'Kowalski', 24),
+//        array(2, 'Maja', 'Nowak', 15)
+//    );
+//    
+//    fputcsv($fd, $headers);
+//    foreach($records as $record) {
+//        fputcsv($fd, $record);
+//    }
+    
+//    $sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
+//    FROM '/tmp/ram/plik.csv'
+//    DELIMITER ',' CSV HEADER";
 
-//$fd = fopen('php://temp/maxmemory:1048576', 'w');
-//if($fd === FALSE) {
-//    die('Failed to open temporary file');
-//}
-//
-//$headers = array('user_id', 'first_name', 'last_name', 'user_age');
-//$records = array(
-//    array(1, 'Janek', 'Kowalski', 24),
-//    array(2, 'Maja', 'Nowak', 15)
-//);
-//
-//fputcsv($fd, $headers);
-//foreach($records as $record) {
-//    fputcsv($fd, $record);
-//}
-//
-//$csv = rewind($fd);
-////$csv = stream_get_contents($fd);
-//
-//
-//$sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
-//FROM " . $csv; //. "'
-////HEADER";
+$sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
+    FROM '/tmp/ram/$fileCSV'
+    CSV 
+    HEADER";
 
 echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
 
-try
-{
-//    $dbh->query($sqlBulk);
-}
-catch (PDOException $e)
-{
-    echo 'PDO error: ' . $e->getMessage() . "\n\n";
-}
+    try
+    {
+        $dbh->query($sqlBulk);
+    }
+    catch (PDOException $e)
+    {
+        echo 'PDO error: ' . $e->getMessage() . "\n\n";
+    }
 
-//rewind($fileHandler);
+    //rewind($fileHandler);
 
-fclose($fd);
-//fclose($fileHandler);
+//    fclose($fd);
+//    fclose($fileHandler);
 
 echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
 
