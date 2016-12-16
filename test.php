@@ -15,8 +15,6 @@ function curlClearData()
     curl_close($ch);
 }
 
-
-
 $urls = array(
     "http://localhost/praktykanci/core.php?task=1",
     "http://localhost/praktykanci/core.php?task=2",
@@ -66,11 +64,9 @@ sleep(3);
 
 $start = microtime(true);
 
-
 curlMultiRequest($urls);
 
 $end = microtime(true);
 echo "\n\nCzas dzialania: " . number_format(($end - $start), 16, '.', ' ') . " sek";
-
 
 echo "\n\n\n\n";
