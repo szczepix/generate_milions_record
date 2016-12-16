@@ -4,22 +4,14 @@ echo "<pre>";
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
+//error_reporting( E_ALL ^ E_NOTICE );
 error_reporting(E_ALL);
 
-$task = $_GET["task"];
-
-if ($task == 0)
-{
-    
-}
-else
-{
-    echo ini_get("memory_limit") . "\n";
-    ini_set('memory_limit', '2048M');
-    echo ini_get("memory_limit") . "\n";
-    echo "not real: " . (memory_get_peak_usage(false) / 1024 / 1024) . " MiB\n";
-    echo "real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
-}
+echo ini_get("memory_limit") . "\n";
+ini_set('memory_limit', '2048M');
+echo ini_get("memory_limit") . "\n";
+echo "not real: " . (memory_get_peak_usage(false) / 1024 / 1024) . " MiB\n";
+echo "real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
 
 $dbName = "praktykanci";
 $host = "localhost";
@@ -30,7 +22,9 @@ $randomGeneratorTimeLetter = 0;
 $randomGeneratorTimeLetterGen = 0;
 $randomGeneratorTimeNumber = 0;
 $randomGeneratorTimeSql = 0;
+$sql = "";
 
+$task = null;
 $fileCSV = "";
 $startLoop = null;
 $stopLoop = null;
@@ -67,12 +61,13 @@ function randomAge()
 
 $startTimeScript = microtime(true);
 $startTimeGlobal = microtime(true);
+echo "Start: " . date('H:i:s', time()) . " \n";
+
+$countRecords = 5000000;
+
+echo "do zapisania w tabeli: " . number_format($countRecords, 0, ',', ' ') . " rekordów\n";
 
 $startTime = microtime(true);
-
-$fileName = "plik";
-$fileExtension = ".csv";
-$loopMultiplier = 1250000;
 
 if ($_GET["task"] == 0)
 {
@@ -98,69 +93,82 @@ WITH (
 
     $dbh->query($sqlTableCreate);
     $dbh->query($sqlTableOwner);
-    echo "Tabela users została wyczysczona!\n\n";
 //    exit();
 }
 elseif ($_GET["task"] == 1)
 {
     $task = 1;
-    $fileCSV = $fileName . $task . $fileExtension;
+    $fileCSV = "plik" . $task . ".csv";
     $startLoop = 0;
-    $stopLoop = $task * $loopMultiplier;
+    $stopLoop = $task * 1000000;
 }
 elseif ($_GET["task"] == 2)
 {
     $task = 2;
-    $fileCSV = $fileName . $task . $fileExtension;
-    $startLoop = ($task - 1) * $loopMultiplier;
-    $stopLoop = $task * $loopMultiplier;
+    $fileCSV = "plik" . $task . ".csv";
+    $startLoop = ($task - 1) * 1000000;
+    $stopLoop = $task * 1000000;
 }
 elseif ($_GET["task"] == 3)
 {
     $task = 3;
-    $fileCSV = $fileName . $task . $fileExtension;
-    $startLoop = ($task - 1) * $loopMultiplier;
-    $stopLoop = $task * $loopMultiplier;
+    $fileCSV = "plik" . $task . ".csv";
+    $startLoop = ($task - 1) * 1000000;
+    $stopLoop = $task * 1000000;
 }
 elseif ($_GET["task"] == 4)
 {
     $task = 4;
-    $fileCSV = $fileName . $task . $fileExtension;
-    $startLoop = ($task - 1) * $loopMultiplier;
-    $stopLoop = $task * $loopMultiplier;
+    $fileCSV = "plik" . $task . ".csv";
+    $startLoop = ($task - 1) * 1000000;
+    $stopLoop = $task * 1000000;
+}
+elseif ($_GET["task"] == 5)
+{
+    $task = 5;
+    $fileCSV = "plik" . $task . ".csv";
+    $startLoop = ($task - 1) * 1000000;
+    $stopLoop = $task * 1000000;
 }
 else
 {
     echo "BŁĄÐ: parametr task nie ustawiony!";
-    echo "TXT: " . $fileCSV . "\n";
+    echo "CSV: " . $fileCSV . "\n";
     echo "startLoop: " . $startLoop . "\n";
     echo "stopLoop: " . $stopLoop . "\n";
     exit();
 }
 
-// IMPORTANT! before run this script exec in cmd bottom command
+//$output = shell_exec('rm -rf /tmp/ram');
+//echo $output . "\n";
+//
+//$output = shell_exec('mkdir /tmp/ram');
+//echo $output . "\n";
+//
 //$output = shell_exec('mount -t tmpfs -o size=512m tmpfs /tmp/ram');
 //echo $output . "\n";
 
-if ($task == 0)
-{
-    
-}
-else
-{
+//if (isset($task) && $task > 0 && $task < 6)
+//{
     try
     {
-        $fileHandler = fopen('/tmp/ram/' . $fileCSV, 'w');
+        $fileHandler = fopen('../tmp/ram/' . $fileCSV, 'w');
+
         $dataTable = array('user_id', 'first_name', 'last_name', 'user_age',);
+
         if ($fileHandler != false)
         {
+
             echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+            fputcsv($fileHandler, $dataTable);
+
             for ($i = $startLoop; $i < $stopLoop; $i ++)
             {
-                fwrite($fileHandler, (($i + 1 . "," . randomString(15) . "," . randomString(15) . "," . randomAge()) . "\n"));
+                fputcsv($fileHandler, array($i + 1, randomString(15), randomString(15), randomAge()));
             }
 
             fclose($fileHandler);
+
             echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
         }
         else
@@ -172,10 +180,14 @@ else
     {
         echo "File Error: " . $ex->getMessage();
     }
+
     $sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
     FROM '/tmp/ram/$fileCSV'
-    DELIMITER ','";
+    CSV 
+    HEADER";
+
     echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
+
     try
     {
         $dbh = new PDO("pgsql:dbname=$dbName;host=$host", $dbUser, $dbPass);
@@ -186,9 +198,9 @@ else
     {
         echo 'PDO error: ' . $e->getMessage() . "\n\n";
     }
+    
     echo "Memory used (after) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
-}
-
+//}
 
 $endTime = microtime(true);
 $randomGeneratorTimeSql += ($endTime - $startTime);
@@ -198,25 +210,17 @@ $endTimeScript = microtime(true);
 
 $allTimeScript = ($endTimeScript - $startTimeScript);
 $endTimeGlobal = microtime(true);
+echo "Koniec: " . date('H:i:s', time()) . "\n" . ($endTimeGlobal - $startTimeGlobal) . " s\n";
+echo number_format($allTimeScript, 16, '.', ' ') . " sek - Czas całego skryptu\n";
+echo number_format($randomGeneratorTimeSql, 16, '.', ' ') . " sek - Czas SQL-a\n";
+echo number_format($randomGeneratorTimeLetter, 16, '.', ' ') . " sek - randomString()\n";
+echo number_format($randomGeneratorTimeNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
 
-if ($task == 0)
-{
-    
-}
-else
-{
-    echo "Koniec: " . date('H:i:s', time()) . "\n" . ($endTimeGlobal - $startTimeGlobal) . " s\n";
-    echo number_format($allTimeScript, 16, '.', ' ') . " sek - Czas całego skryptu\n";
-    echo number_format($randomGeneratorTimeSql, 16, '.', ' ') . " sek - Czas SQL-a\n";
-    echo number_format($randomGeneratorTimeLetter, 16, '.', ' ') . " sek - randomString()\n";
-    echo number_format($randomGeneratorTimeNumber, 16, '.', ' ') . " sek - randomAge()\n\n";
-
-    $allPercentNumber = $allTimeScript;
-    $sqlPercent = (($randomGeneratorTimeSql) * 100) / $allPercentNumber;
-    $randomPercent = ((($randomGeneratorTimeLetter) + ($randomGeneratorTimeNumber)) * 100) / $allPercentNumber;
-    echo "Proporcje czasów działania skryptu\n\n";
-    echo number_format($sqlPercent, 4, '.', ' ') . "% - czas SQL-a\n";
-    echo " " . number_format($randomPercent, 4, '.', ' ') . "% - czas generowania danych\n";
-}
+$allPercentNumber = $allTimeScript;
+$sqlPercent = (($randomGeneratorTimeSql) * 100) / $allPercentNumber;
+$randomPercent = ((($randomGeneratorTimeLetter) + ($randomGeneratorTimeNumber)) * 100) / $allPercentNumber;
+echo "Proporcje czasów działania skryptu\n\n";
+echo number_format($sqlPercent, 4, '.', ' ') . "% - czas SQL-a\n";
+echo " " . number_format($randomPercent, 4, '.', ' ') . "% - czas generowania danych\n";
 
 echo "</pre>";
