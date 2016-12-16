@@ -4,7 +4,6 @@ echo "<pre>";
 
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
-//error_reporting( E_ALL ^ E_NOTICE );
 error_reporting(E_ALL);
 
 $task = $_GET["task"];
@@ -31,7 +30,6 @@ $randomGeneratorTimeLetter = 0;
 $randomGeneratorTimeLetterGen = 0;
 $randomGeneratorTimeNumber = 0;
 $randomGeneratorTimeSql = 0;
-$sql = "";
 
 $fileCSV = "";
 $startLoop = null;
@@ -70,11 +68,11 @@ function randomAge()
 $startTimeScript = microtime(true);
 $startTimeGlobal = microtime(true);
 
-//$countRecords = 5000000;
-
-//echo "do zapisania w tabeli: " . number_format($countRecords, 0, ',', ' ') . " rekordów\n";
-
 $startTime = microtime(true);
+
+$fileName = "plik";
+$fileExtension = ".csv";
+$loopMultiplier = 1250000;
 
 if ($_GET["task"] == 0)
 {
@@ -106,51 +104,43 @@ WITH (
 elseif ($_GET["task"] == 1)
 {
     $task = 1;
-    $fileCSV = "plik" . $task . ".csv";
+    $fileCSV = $fileName . $task . $fileExtension;
     $startLoop = 0;
-    $stopLoop = $task * 2000000;
+    $stopLoop = $task * $loopMultiplier;
 }
 elseif ($_GET["task"] == 2)
 {
     $task = 2;
-    $fileCSV = "plik" . $task . ".csv";
-    $startLoop = ($task - 1) * 2000000;
-    $stopLoop = $task * 2000000;
+    $fileCSV = $fileName . $task . $fileExtension;
+    $startLoop = ($task - 1) * $loopMultiplier;
+    $stopLoop = $task * $loopMultiplier;
 }
 elseif ($_GET["task"] == 3)
 {
     $task = 3;
-    $fileCSV = "plik" . $task . ".csv";
-    $startLoop = ($task - 1) * 2000000;
-    $stopLoop = $task * 2000000;
+    $fileCSV = $fileName . $task . $fileExtension;
+    $startLoop = ($task - 1) * $loopMultiplier;
+    $stopLoop = $task * $loopMultiplier;
 }
 elseif ($_GET["task"] == 4)
 {
     $task = 4;
-    $fileCSV = "plik" . $task . ".csv";
-    $startLoop = ($task - 1) * 1250000;
-    $stopLoop = $task * 1250000;
+    $fileCSV = $fileName . $task . $fileExtension;
+    $startLoop = ($task - 1) * $loopMultiplier;
+    $stopLoop = $task * $loopMultiplier;
 }
 else
 {
     echo "BŁĄÐ: parametr task nie ustawiony!";
-    echo "CSV: " . $fileCSV . "\n";
+    echo "TXT: " . $fileCSV . "\n";
     echo "startLoop: " . $startLoop . "\n";
     echo "stopLoop: " . $stopLoop . "\n";
     exit();
 }
 
-//$output = shell_exec('rm -rf /tmp/ram');
-//echo $output . "\n";
-//
-//$output = shell_exec('mkdir /tmp/ram');
-//echo $output . "\n";
-//
+// IMPORTANT! before run this script exec in cmd bottom command
 //$output = shell_exec('mount -t tmpfs -o size=512m tmpfs /tmp/ram');
 //echo $output . "\n";
-//$fileCSV = "plik.csv";
-//$startLoop = 0;
-//$stopLoop = 1000000;
 
 if ($task == 0)
 {
@@ -165,13 +155,9 @@ else
         if ($fileHandler != false)
         {
             echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
-//        fputcsv($fileHandler, $dataTable);
-//        fwrite($fileHandler, "user_id,first_name,last_name,user_age\n");
             for ($i = $startLoop; $i < $stopLoop; $i ++)
             {
-//            fputcsv($fileHandler, array($i + 1, randomString(15), randomString(15), randomAge()));
-                $string = ($i + 1 . "," . randomString(15) . "," . randomString(15) . "," . randomAge()) . "\n";
-                fwrite($fileHandler, $string);
+                fwrite($fileHandler, (($i + 1 . "," . randomString(15) . "," . randomString(15) . "," . randomAge()) . "\n"));
             }
 
             fclose($fileHandler);
