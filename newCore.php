@@ -11,3 +11,48 @@ function debugMode()
         error_reporting(E_ALL);
     }
 }
+
+function chcekMemory()
+{
+    
+}
+
+function chcekTask()
+{
+    
+}
+
+function checkMountRamDisk()
+{
+    
+}
+
+function generateRangomString()
+{
+    
+}
+
+function generateRangomAge()
+{
+    
+}
+
+function cleanDataTable()
+{
+    
+}
+
+function createDataFile()
+{
+    
+}
+
+function insertSingleDataFile()
+{
+    
+}
+
+function insertAllDataFiles()
+{
+    
+}
