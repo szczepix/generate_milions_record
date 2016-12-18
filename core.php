@@ -6,7 +6,17 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-$task = $_GET["task"];
+$task = null;
+
+if(isset($_GET["task"]))
+{
+    $task = $_GET["task"];
+}
+else
+{
+    $task = 0;
+}
+
 
 if ($task == 0)
 {
@@ -74,7 +84,7 @@ $fileName = "plik";
 $fileExtension = ".csv";
 $loopMultiplier = 1250000;
 
-if ($_GET["task"] == 0)
+if ($task == 0)
 {
     $task = 0;
     $dbh = new PDO("pgsql:dbname=$dbName;host=$host", $dbUser, $dbPass);
@@ -101,31 +111,35 @@ WITH (
     echo "Tabela users została wyczysczona!\n\n";
 //    exit();
 }
-elseif ($_GET["task"] == 1)
+elseif ($task == 1)
 {
     $task = 1;
     $fileCSV = $fileName . $task . $fileExtension;
+    echo "FileCSV" . $task . ": " . $fileCSV . "\n";
     $startLoop = 0;
     $stopLoop = $task * $loopMultiplier;
 }
-elseif ($_GET["task"] == 2)
+elseif ($task == 2)
 {
     $task = 2;
     $fileCSV = $fileName . $task . $fileExtension;
+    echo "FileCSV" . $task . ": " . $fileCSV . "\n";
     $startLoop = ($task - 1) * $loopMultiplier;
     $stopLoop = $task * $loopMultiplier;
 }
-elseif ($_GET["task"] == 3)
+elseif ($task == 3)
 {
     $task = 3;
     $fileCSV = $fileName . $task . $fileExtension;
+    echo "FileCSV" . $task . ": " . $fileCSV . "\n";
     $startLoop = ($task - 1) * $loopMultiplier;
     $stopLoop = $task * $loopMultiplier;
 }
-elseif ($_GET["task"] == 4)
+elseif ($task == 4)
 {
     $task = 4;
     $fileCSV = $fileName . $task . $fileExtension;
+    echo "FileCSV" . $task . ": " . $fileCSV . "\n";
     $startLoop = ($task - 1) * $loopMultiplier;
     $stopLoop = $task * $loopMultiplier;
 }
@@ -150,8 +164,13 @@ else
 {
     try
     {
-        $fileHandler = fopen('/tmp/ram/' . $fileCSV, 'w');
-        $dataTable = array('user_id', 'first_name', 'last_name', 'user_age',);
+//        $fileHandler = fopen('/tmp/ram/' . $fileCSV, 'w'); // Linux
+        $path = "R:\\" . $fileCSV . "\n";
+
+        echo "Path: " . $path . "\n";
+
+        $fileHandler = fopen("R:\\" . $fileCSV, 'w'); // Windows
+//        $fileHandler = fopen("C:\\test.txt", 'w');
         if ($fileHandler != false)
         {
             echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
@@ -173,7 +192,7 @@ else
         echo "File Error: " . $ex->getMessage();
     }
     $sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
-    FROM '/tmp/ram/$fileCSV'
+    FROM 'R:\\$fileCSV'
     DELIMITER ','";
     echo "Memory used (before) real: " . (memory_get_peak_usage(true) / 1024 / 1024) . " MiB\n\n";
     try

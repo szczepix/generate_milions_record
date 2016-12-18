@@ -27,12 +27,12 @@ function debugMode()
     }
 }
 
-function chcekMemory()
+function checkMemory()
 {
     
 }
 
-function chcekTask()
+function checkTask()
 {
     
 }
@@ -98,8 +98,10 @@ debugMode();
 
 for($i=0;$i<100;$i++)
 {
-    echo generateRangomString(15) . "\n";
-    echo generateRangomAge() . "\n";
+//    echo generateRangomString(15) . "\n";
+//    echo generateRangomAge() . "\n";
+    generateRangomString(15);
+    generateRangomAge();
 }
 
 echo "timeGenerateLetter: " . $timeGenerateLetter . "\n";

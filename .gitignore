@@ -1,4 +1,5 @@
 /nbproject/
 .project
 *.csv
-/test2.php
+.idea/*
+test2.php

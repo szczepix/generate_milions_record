@@ -6,20 +6,23 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-function curlClearData()
+//$folder = "praktykanci";
+$folder = "generate_milions_record";
+
+function curlClearData($folder)
 {
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "http://localhost/praktykanci/core.php?task=0");
+    curl_setopt($ch, CURLOPT_URL, "http://localhost/" . $folder . "/core.php?task=0");
     curl_setopt($ch, CURLOPT_HEADER, 0);
     curl_exec($ch);
     curl_close($ch);
 }
 
 $urls = array(
-    "http://localhost/praktykanci/core.php?task=1",
-    "http://localhost/praktykanci/core.php?task=2",
-    "http://localhost/praktykanci/core.php?task=3",
-    "http://localhost/praktykanci/core.php?task=4",
+    "http://localhost/" . $folder . "/core.php?task=1",
+    "http://localhost/" . $folder . "/core.php?task=2",
+    "http://localhost/" . $folder . "/core.php?task=3",
+    "http://localhost/" . $folder . "/core.php?task=4",
 );
 
 function curlMultiRequest($urls, $options = array())
@@ -58,7 +61,7 @@ function curlMultiRequest($urls, $options = array())
     return $results;
 }
 
-curlClearData();
+curlClearData($folder);
 
 sleep(3);
 
