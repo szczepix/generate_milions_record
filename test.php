@@ -6,20 +6,22 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 
-function curlClearData()
+function curlExec($url)
 {
     $ch = curl_init();
-    curl_setopt($ch, CURLOPT_URL, "http://localhost/praktykanci/core.php?task=0");
+    curl_setopt($ch, CURLOPT_URL, $url);
     curl_setopt($ch, CURLOPT_HEADER, 0);
     curl_exec($ch);
     curl_close($ch);
 }
 
+# insert on     -> ?task=1&bulk=1
+# ionsert off   -> ?task=1
 $urls = array(
-    "http://localhost/praktykanci/core.php?task=1",
-    "http://localhost/praktykanci/core.php?task=2",
-    "http://localhost/praktykanci/core.php?task=3",
-    "http://localhost/praktykanci/core.php?task=4",
+    "http://localhost/praktykanci/core.php?task=1&bulk=1",
+    "http://localhost/praktykanci/core.php?task=2&bulk=1",
+    "http://localhost/praktykanci/core.php?task=3&bulk=1",
+    "http://localhost/praktykanci/core.php?task=4&bulk=1",
 );
 
 function curlMultiRequest($urls, $options = array())
@@ -58,15 +60,16 @@ function curlMultiRequest($urls, $options = array())
     return $results;
 }
 
-curlClearData();
+curlExec("http://localhost/praktykanci/core.php?task=0");
 
 sleep(3);
 
 $start = microtime(true);
 
 curlMultiRequest($urls);
+# uncomment if insert in one statemment and off insert in 20 line this file
+# this is ~6s longer than multiple insert
+//curlExec("http://localhost/praktykanci/core.php?bulk=3");
 
 $end = microtime(true);
-echo "\n\nCzas dzialania: " . number_format(($end - $start), 16, '.', ' ') . " sek";
-
-echo "\n\n\n\n";
+echo "\nTest runing time: " . number_format(($end - $start), 16, '.', ' ') . " s";
