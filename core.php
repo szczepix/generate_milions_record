@@ -7,17 +7,20 @@ const DB_HOST = "localhost";
 const DB_USER = "user-praktykanci";
 const DB_PASS = "praktykanci";
 
-$task = -1;
-$bulk = 0;
-$fileName = "file";
-$fileExtension = ".csv";
-$timeGenerateLetter = 0;
-$timeGenerateAge = 0;
-$timeSqlBulk = 0;
-$timeFileCreate = 0;
-$timeScriptRunning = 0;
+$fileRecordsParam = array(
+    'file_name'      => "file",
+    'file_extension' => ".csv",
+);
 
-function debugMode()
+$elapsedTimes = array(
+    'script_running'  => 0,
+    'generate_letter' => 0,
+    'generate_age'    => 0,
+    'sql_bulk'        => 0,
+    'file_create'     => 0,
+);
+
+function settingDebugMode()
 {
     if (DEBUG)
     {
@@ -38,22 +41,14 @@ function getMemoryUsage()
     return memory_get_peak_usage(true) / 1024 / 1024; // MiB
 }
 
-function checkTask()
+function getTaskId()
 {
-    global $task;
-    if (isset($_GET["task"]))
-    {
-        $task = $_GET["task"];
-    }
+    return isset($_GET["task"]) ? $_GET["task"] : -1;
 }
 
-function checkBulk()
+function getBulkId()
 {
-    global $bulk;
-    if (isset($_GET["bulk"]))
-    {
-        $bulk = $_GET["bulk"];
-    }
+    return isset($_GET["bulk"]) ? $_GET["bulk"] : 0;
 }
 
 function checkMountRamDisk()
@@ -61,57 +56,76 @@ function checkMountRamDisk()
     // TODO: find and write linux cmd check mount
 }
 
-function showVarTable($round = 4)
+function printDebugInfo($taskId, $elapsedTimes, $round = 4)
 {
-    global $task, $timeScriptRunning, $timeGenerateLetter,
-    $timeGenerateAge, $timeSqlBulk, $timeFileCreate;
-    echo '<table border="1" cellpadding="5" style="text-align:center"><tr>
-              <th>task</th>
-              <th>TimeAll</th>
-              <th>TimeLetter</th>
-              <th>TimeAge</th>
-              <th>TimeSql</th>
-              <th>TimeFile</th>
-              <th>SQL / RAND</th></tr>';
-    echo "<td>" . $task . "</td>";
-    echo "<td>" . number_format($timeScriptRunning, $round, '.', ' ') . " s</td>";
-    echo "<td>" . number_format($timeGenerateLetter, $round, '.', ' ') . " s</td>";
-    echo "<td>" . number_format($timeGenerateAge, $round, '.', ' ') . " s</td>";
-    echo "<td>" . number_format($timeSqlBulk, $round, '.', ' ') . " s</td>";
-    $timeFile = $timeFileCreate - $timeGenerateLetter - $timeGenerateAge;
-    echo "<td>" . number_format($timeFile, $round, '.', ' ') . " s</td>";
-    $percentRand = (($timeGenerateLetter + $timeGenerateAge) * 100) / $timeScriptRunning;
-    $percentSql = ($timeSqlBulk * 100) / $timeScriptRunning;
-    echo "<td>" . number_format($percentSql, 4, '.', ' ') . "% / "
-    . number_format($percentRand, 4, '.', ' ') . "%</td>";
-    echo "</tr></table>";
+
+    $scriptRunningTimeStr  = number_format($elapsedTimes['script_running'], $round, '.', ' ');
+    $generateLetterTimeStr = number_format($elapsedTimes['generate_letter'], $round, '.', ' ');
+    $generateAgeTimeStr    = number_format($elapsedTimes['generate_age'], $round, '.', ' ');
+    $sqlBulkTimeStr        = number_format($elapsedTimes['sql_bulk'], $round, '.', ' ');
+    $fileCreateTime        = $elapsedTimes['file_create'] - $elapsedTimes['generate_letter'] - $elapsedTimes['generate_age'];
+    $fileCreateTimeStr     = number_format($fileCreateTime, $round, '.', ' ');
+    if ($elapsedTimes['script_running'] > 0)
+    {
+        $sqlTimePercent  = ($elapsedTimes['sql_bulk'] * 100) / $elapsedTimes['script_running'];
+        $randTimePercent = ((
+                $elapsedTimes['generate_letter'] + $elapsedTimes['generate_age']
+                ) * 100) / $elapsedTimes['script_running'];
+    }
+    else
+    {
+        $sqlTimePercent  = 0;
+        $randTimePercent = 0;
+    }
+    $sqlTimePercentStr  = number_format($sqlTimePercent, 4, '.', ' ');
+    $randTimePercentStr = number_format($randTimePercent, 4, '.', ' ');
+    echo <<<EOT
+<table border="1" cellpadding="5" style="text-align:center">
+    <tr>
+        <th>task</th>
+        <th>TimeAll</th>
+        <th>TimeLetter</th>
+        <th>TimeAge</th>
+        <th>TimeSql</th>
+        <th>TimeFile</th>
+        <th>SQL / RAND</th>
+    </tr>
+    <tr>
+        <th>$taskId</th>
+        <th>$scriptRunningTimeStr</th>
+        <th>$generateLetterTimeStr</th>
+        <th>$generateAgeTimeStr</th>
+        <th>$sqlBulkTimeStr</th>
+        <th>$fileCreateTimeStr</th>
+        <th>$sqlTimePercentStr % / $randTimePercentStr %</th>
+    </tr>
+</table>
+EOT;
 }
 
-function generateRangomString($length)
+function getRandomString(&$timeGenerateLetter, $length = 15)
 {
-    global $timeGenerateLetter;
-    $startTime = microtime(true);
-    $characters = 'abcdefghijklmnopqrstuvwxyz';
-    $shuffle = str_shuffle($characters);
-    $randomText = substr($shuffle, 0, $length);
-    $result = ucfirst($randomText);
+    $startTime          = microtime(true);
+    $characters         = 'abcdefghijklmnopqrstuvwxyz';
+    $shuffle            = str_shuffle($characters);
+    $randomText         = substr($shuffle, 0, $length);
+    $result             = ucfirst($randomText);
     $timeGenerateLetter += (microtime(true) - $startTime);
     return $result;
 }
 
-function generateRangomAge()
+function getRandomAge(&$timeGenerateAge)
 {
-    global $timeGenerateAge;
-    $startTime = microtime(true);
-    $result = mt_rand(1, 99);
+    $startTime       = microtime(true);
+    $result          = mt_rand(1, 99);
     $timeGenerateAge += (microtime(true) - $startTime);
     return $result;
 }
 
-function cleanDataTable($dbh)
+function recreateTableStructure($dbh)
 {
     $sqlTableTruncate = "DROP TABLE public.users";
-    $sqlTableCreate = "CREATE TABLE public.users
+    $sqlTableCreate   = "CREATE TABLE public.users
                            (
                               user_id serial, 
                               first_name character varying(15), 
@@ -120,7 +134,7 @@ function cleanDataTable($dbh)
                               CONSTRAINT user_id_key PRIMARY KEY (user_id)
                            ) 
                            WITH (OIDS = FALSE)";
-    $sqlTableOwner = 'ALTER TABLE public.users 
+    $sqlTableOwner    = 'ALTER TABLE public.users 
                           OWNER TO "user-praktykanci"';
     $dbh->query($sqlTableTruncate);
     $dbh->query($sqlTableCreate);
@@ -128,13 +142,12 @@ function cleanDataTable($dbh)
     echo '<span style="color:red;">Table "users" drop and created again!</span>';
 }
 
-function createDataFile($task, $rows = 1250000)
+function createFilesRecords($taskId, &$elapsedTimes, $fileRecordsParam, $rows = 1250000)
 {
     try
     {
-        global $fileName, $fileExtension, $timeFileCreate;
-        $startTime = microtime(true);
-        $fileCSV = $fileName . $task . $fileExtension;
+        $startTime   = microtime(true);
+        $fileCSV     = $fileRecordsParam['file_name'] . $taskId . $fileRecordsParam['file_extension'];
         $fileHandler = fopen('/tmp/ram/' . $fileCSV, 'w');
         if ($fileHandler != false)
         {
@@ -142,12 +155,16 @@ function createDataFile($task, $rows = 1250000)
             {
                 echo "Memory used (before) fwrite: " . getMemoryUsage() . " MiB\n";
             }
-            for ($i = ($task - 1) * $rows; $i < $task * $rows; $i++)
+            $userIdOffset = ($taskId * $rows) + 1;
+            for ($i = 0; $i < $rows; $i++)
             {
-                fwrite($fileHandler, (( $i + 1 . ","
-                        . generateRangomString(15) . ","
-                        . generateRangomString(15) . ","
-                        . generateRangomAge()) . "\n"));
+
+                fwrite($fileHandler, implode(',', array(
+                            $userIdOffset + $i,
+                            getRandomString($elapsedTimes['generate_letter']),
+                            getRandomString($elapsedTimes['generate_letter']),
+                            getRandomAge($elapsedTimes['generate_age']),
+                        )) . "\n");
             }
             fclose($fileHandler);
             if (DEBUG)
@@ -159,7 +176,7 @@ function createDataFile($task, $rows = 1250000)
         {
             echo "File open error";
         }
-        $timeFileCreate += (microtime(true) - $startTime);
+        $elapsedTimes['file_create'] += (microtime(true) - $startTime);
     }
     catch (Exception $ex)
     {
@@ -167,12 +184,44 @@ function createDataFile($task, $rows = 1250000)
     }
 }
 
-function insertSingleDataFile($dbh, $task)
+function createOneFileRecords($taskId, &$elapsedTimes, $fileRecordsParam, $rows = 1250000)
 {
-    global $fileName, $fileExtension, $timeSqlBulk;
+    try
+    {
+        $startTime   = microtime(true);
+        $fileCSV     = $fileRecordsParam['file_name'] . $fileRecordsParam['file_extension'];
+            if (DEBUG)
+            {
+                echo "Memory used (before) fwrite: " . getMemoryUsage() . " MiB\n";
+            }
+            $userIdOffset = ($taskId * $rows) + 1;
+            for ($i = 0; $i < $rows; $i++)
+            {
+                file_put_contents('/tmp/ram/'.$fileCSV, implode(',', array(
+                            $userIdOffset + $i,
+                            getRandomString($elapsedTimes['generate_letter']),
+                            getRandomString($elapsedTimes['generate_letter']),
+                            getRandomAge($elapsedTimes['generate_age']),
+                        )) . "\n" , FILE_APPEND);
+            }
+            if (DEBUG)
+            {
+                echo "Memory used (after) fwrite: " . getMemoryUsage() . " MiB\n";
+            }
+        $elapsedTimes['file_create'] += (microtime(true) - $startTime);
+    }
+    catch (Exception $ex)
+    {
+        echo "File Error: " . $ex->getMessage();
+    }
+}
+
+function insertFilesRecords($dbh, $task, &$elapsedTimes, $fileRecordsParam)
+{
     $startTime = microtime(true);
-    $fileCSV = $fileName . $task . $fileExtension;
-    $sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
+    $fileCSV   = $fileRecordsParam['file_name'] . $task . $fileRecordsParam['file_extension'];
+    var_dump($fileCSV);
+    $sqlBulk   = "COPY users (user_id, first_name, last_name, user_age)
     FROM '/tmp/ram/$fileCSV'
     DELIMITER ','";
 
@@ -184,29 +233,39 @@ function insertSingleDataFile($dbh, $task)
     {
         echo 'PDO error: ' . $e->getMessage() . "\n\n";
     }
-    $timeSqlBulk += (microtime(true) - $startTime);
+    $elapsedTimes['sql_bulk'] += (microtime(true) - $startTime);
 }
 
-function insertAllDataFiles($dbh)
+function insertOneFileRecords($dbh, &$elapsedTimes, $fileRecordsParam)
 {
-    global $fileName, $fileExtension, $timeSqlBulk;
     $startTime = microtime(true);
-    $fileCSV = $fileName . 1 . $fileExtension;
-    $sqlBulk = "COPY users (user_id, first_name, last_name, user_age)
+    $fileCSV   = $fileRecordsParam['file_name'] . $fileRecordsParam['file_extension'];
+    $sqlBulk   = "COPY users (user_id, first_name, last_name, user_age)
     FROM '/tmp/ram/$fileCSV'
-    DELIMITER ',';";
-    $fileCSV = $fileName . 2 . $fileExtension;
-    $sqlBulk .= "COPY users (user_id, first_name, last_name, user_age)
-    FROM '/tmp/ram/$fileCSV'
-    DELIMITER ',';";
-    $fileCSV = $fileName . 3 . $fileExtension;
-    $sqlBulk .= "COPY users (user_id, first_name, last_name, user_age)
-    FROM '/tmp/ram/$fileCSV'
-    DELIMITER ',';";
-    $fileCSV = $fileName . 4 . $fileExtension;
-    $sqlBulk .= "COPY users (user_id, first_name, last_name, user_age)
-    FROM '/tmp/ram/$fileCSV'
-    DELIMITER ',';";
+    DELIMITER ','";
+
+    try
+    {
+        $dbh->query($sqlBulk);
+    }
+    catch (PDOException $e)
+    {
+        echo 'PDO error: ' . $e->getMessage() . "\n\n";
+    }
+    $elapsedTimes['sql_bulk'] += (microtime(true) - $startTime);
+}
+
+function insertAllFileRecords($dbh, &$elapsedTimes, $fileRecordsParam, $fileNumber = 4)
+{
+    $startTime = microtime(true);
+    $sqlBulk   = "";
+    for ($i = 1; $i <= $fileNumber; $i++)
+    {
+        $fileCSV = $fileRecordsParam['file_name'] . $i . $fileRecordsParam['file_extension'];
+        $sqlBulk .= "COPY users (user_id, first_name, last_name, user_age)
+                    FROM '/tmp/ram/$fileCSV'
+                    DELIMITER ',';";
+    }
     try
     {
         $dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, 1);
@@ -217,7 +276,7 @@ function insertAllDataFiles($dbh)
     {
         echo 'PDO error: ' . $e->getMessage() . "\n\n";
     }
-    $timeSqlBulk += (microtime(true) - $startTime);
+    $elapsedTimes['sql_bulk'] += (microtime(true) - $startTime);
 }
 
 function getDatabaseHandler($dbName, $dbHost, $dbUser, $dbPass)
@@ -244,36 +303,43 @@ echo "<pre>";
 
 $start = microtime(true);
 
-debugMode();
+settingDebugMode();
 
-checkTask();
+$taskId = getTaskId();
 
-checkBulk();
+$bulkId = getBulkId();
 
 $dbh = getDatabaseHandler(DB_NAME, DB_HOST, DB_USER, DB_PASS);
 
-if ($task == 0)
+if ($taskId == 0)
 {
-    cleanDataTable($dbh);
+//    recreateTableStructure($dbh);
+//    $fileCSV   = $fileRecordsParam['file_name'] . $fileRecordsParam['file_extension'];
+//    file_put_contents("/tmp/ram/".$fileCSV, "");
 }
 
-if ($task > 0)
+if ($taskId > 0)
 {
-    createDataFile($task);
-    if ($bulk == 0)
+//    createFilesRecords($taskId, $elapsedTimes, $fileRecordsParam);
+//    createOneFileRecords($taskId, $elapsedTimes, $fileRecordsParam);
+    if ($bulkId == 0)
     {
         echo '<span style="color:red;">insertData is disable</span>';
     }
     elseif ($bulk == 1)
     {
-        insertSingleDataFile($dbh, $task);
+//        insertFilesRecords($dbh, $taskId, $elapsedTimes, $fileRecordsParam);
     }
 }
 
-if ($bulk == 3)
+if ($bulkId == 2)
 {
-    insertAllDataFiles($dbh);
+//    insertAllFileRecords($dbh, $elapsedTimes, $fileRecordsParam);
+}
+elseif ($bulkId == 3)
+{
+//    insertOneFileRecords($dbh, $elapsedTimes, $fileRecordsParam);
 }
 
-$timeScriptRunning = microtime(true) - $start;
-showVarTable();
+$elapsedTimes['script_running'] = microtime(true) - $start;
+printDebugInfo($taskId, $elapsedTimes);

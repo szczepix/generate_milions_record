@@ -18,10 +18,10 @@ function curlExec($url)
 # insert on     -> ?task=1&bulk=1
 # ionsert off   -> ?task=1
 $urls = array(
-    "http://localhost/praktykanci/core.php?task=1&bulk=1",
-    "http://localhost/praktykanci/core.php?task=2&bulk=1",
-    "http://localhost/praktykanci/core.php?task=3&bulk=1",
-    "http://localhost/praktykanci/core.php?task=4&bulk=1",
+    "http://localhost/praktykanci/core.php?task=1",
+    "http://localhost/praktykanci/core.php?task=2",
+    "http://localhost/praktykanci/core.php?task=3",
+    "http://localhost/praktykanci/core.php?task=4",
 );
 
 function curlMultiRequest($urls, $options = array())
@@ -69,7 +69,7 @@ $start = microtime(true);
 curlMultiRequest($urls);
 # uncomment if insert in one statemment and off insert in 20 line this file
 # this is ~6s longer than multiple insert
-//curlExec("http://localhost/praktykanci/core.php?bulk=3");
+curlExec("http://localhost/praktykanci/core.php?bulk=3");
 
 $end = microtime(true);
 echo "\nTest runing time: " . number_format(($end - $start), 16, '.', ' ') . " s";
